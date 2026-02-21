@@ -1,98 +1,157 @@
 # CLAUDE.md
 
-This file provides guidance to AI assistants (Claude and others) working with this repository.
-
-## Repository Status
-
-This repository is currently **empty** — no source files, no build configuration, and no commit history exist yet. The information below documents the current state and establishes conventions for future development.
-
-**Remote:** `dzigurdarahmet-byte/SergeySS`
-**Active Branch:** `claude/claude-md-mlwea94obhy2v8za-IkaEq`
+This file provides guidance to AI assistants (Claude and others) working in this repository.
 
 ---
 
 ## Project Overview
 
-> **TODO:** Update this section once the project purpose and stack are defined.
+**ВидеоПоиск** is a Next.js 14 web application that lets users search for movies and TV series and find where to stream them across major Russian and international platforms.
 
-This section should describe:
-- What the project does and why it exists
-- The primary users or consumers of this software
-- Any relevant domain context
+**What it does:**
+- Accepts a movie/series title as a search query
+- Fetches results from the [Kinopoisk Unofficial API](https://kinopoisk.dev) (v1.4)
+- Displays title, year, Kinopoisk rating, genres, description, and poster
+- Provides direct search links to: Кинопоиск, Иви, Окко, Старт, YouTube, ВКонтакте
+
+**Primary users:** Russian-speaking audiences looking for streaming options.
+
+**Remote:** `dzigurdarahmet-byte/SergeySS`
 
 ---
 
 ## Repository Structure
 
-> **TODO:** Update as the project structure is established.
-
-Once source files are added, document the layout here. Example:
-
 ```
 /
-├── src/           # Application source code
-├── tests/         # Test files
-├── docs/          # Project documentation
-├── .github/       # GitHub Actions workflows and templates
-├── CLAUDE.md      # This file — AI assistant guidance
-└── README.md      # Human-facing project overview
+├── app/
+│   ├── layout.js           # Root layout — sets <html lang="ru"> and page metadata
+│   └── page.js             # Main (and only) page — search UI and results rendering
+├── .env.local.example      # Template for required environment variables
+├── .gitignore
+├── next.config.js          # Next.js configuration (currently default/empty)
+├── package.json            # Dependencies and npm scripts
+└── CLAUDE.md               # This file
 ```
+
+The project uses the **Next.js App Router** (`app/` directory). There is currently a single route (`/`). All logic lives in `app/page.js`.
+
+---
+
+## Key Source File: `app/page.js`
+
+| Concern | Details |
+|---|---|
+| Directive | `'use client'` — Client Component; all state and event handling runs in the browser |
+| State | `query`, `results`, `searched`, `loading`, `error` — managed with `useState` |
+| API call | `GET https://api.kinopoisk.dev/v1.4/movie/search?query=…&limit=5&page=1` with `X-API-KEY` header |
+| Services | `SERVICES` array at top of file — defines the six streaming platforms with `name`, `color`, and `url` prefix |
+| Styling | Inline style objects throughout; dark theme (`#0a0a0a` background, `#FF4B2B` accent); no CSS framework |
+
+### Kinopoisk API response shape (`docs[]`)
+
+Each result object the UI consumes:
+
+```js
+{
+  id,
+  name,              // Russian title
+  alternativeName,   // English / original title
+  year,
+  rating: { kp },   // Kinopoisk score (float)
+  genres: [{ name }],
+  description,       // Long-form plot text
+  poster: { url },   // Poster image URL
+}
+```
+
+---
+
+## Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `NEXT_PUBLIC_KINOPOISK_API_KEY` | Yes | API key for [kinopoisk.dev](https://kinopoisk.dev). Prefixed with `NEXT_PUBLIC_` so it is available in Client Components. |
+
+**Setup:**
+```bash
+cp .env.local.example .env.local
+# Edit .env.local and fill in NEXT_PUBLIC_KINOPOISK_API_KEY
+```
+
+> **Security:** Never hard-code the API key in source files. Never commit `.env.local`.
+> Note: `NEXT_PUBLIC_` variables are bundled into client-side JS and visible in the browser — this is acceptable for this API key, but do not use this prefix for truly secret credentials.
 
 ---
 
 ## Development Setup
 
-> **TODO:** Fill in once a language/framework is chosen.
+**Prerequisites:** Node.js 18+ and npm (or pnpm/yarn).
 
-Document:
-1. Prerequisites and required tooling versions
-2. How to install dependencies
-3. How to run the application locally
-4. Any required environment variables or secrets
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Configure environment
+cp .env.local.example .env.local
+#    → set NEXT_PUBLIC_KINOPOISK_API_KEY in .env.local
+
+# 3. Start dev server
+npm run dev
+#    → http://localhost:3000
+```
 
 ---
 
 ## Build and Run Commands
 
-> **TODO:** Fill in once build tooling is established.
-
-Common patterns to document:
-
-| Task             | Command               |
-|------------------|-----------------------|
-| Install deps     | `npm install` / `pip install -r requirements.txt` / etc. |
-| Run dev server   | `npm run dev` / etc.  |
-| Build            | `npm run build` / etc.|
-| Run tests        | `npm test` / etc.     |
-| Lint             | `npm run lint` / etc. |
-| Format           | `npm run format` / etc.|
+| Task | Command |
+|---|---|
+| Dev server | `npm run dev` |
+| Production build | `npm run build` |
+| Start production server | `npm start` |
+| Lint | `npm run lint` |
 
 ---
 
 ## Testing
 
-> **TODO:** Fill in once a test framework is chosen.
-
-Describe:
-- The testing framework and runner
-- How to run the full test suite
-- How to run a single test file or test case
-- Conventions for test file naming and placement
-- What test coverage thresholds are enforced (if any)
+No test framework is currently configured. If adding tests:
+- Use **Jest** + **React Testing Library** (standard for Next.js)
+- Place test files alongside source as `*.test.js` or in a top-level `__tests__/` directory
+- The main logic to cover is `handleSearch`: mock `fetch`, assert state transitions and rendered output
 
 ---
 
 ## Code Style and Conventions
 
-> **TODO:** Update once linting and formatting tools are configured.
+- **No CSS framework** — styling uses inline style objects. Match this pattern when adding UI.
+- **No TypeScript** — the project uses plain JavaScript (`.js`). Do not introduce `.ts`/`.tsx` unless the project explicitly migrates.
+- **Minimal abstraction** — all logic is in `app/page.js`. Only extract components or utilities when there is a clear, repeated need.
+- **Russian UI strings** — all user-facing text is in Russian. Keep it that way.
+- **Indentation** — 2 spaces.
+- **No unnecessary comments** — only comment logic that is non-obvious.
+- **No speculative abstractions** — solve the current problem; avoid over-engineering.
 
-Until tooling is established, follow these general principles:
+---
 
-- **Consistency** — Match the style of surrounding code
-- **Clarity** — Prefer readable code over clever code
-- **Minimal changes** — Only modify what is necessary for the task
-- **No unnecessary comments** — Only comment logic that is non-obvious
-- **No speculative abstractions** — Solve the current problem; avoid over-engineering
+## Adding a New Streaming Service
+
+Edit the `SERVICES` array at the top of `app/page.js`:
+
+```js
+{ name: 'ServiceName', color: '#HEXCOLOR', url: 'https://service.example/search?q=' },
+```
+
+The `url` must be a prefix that accepts the title appended directly (the component applies `encodeURIComponent` before appending).
+
+---
+
+## Security Notes
+
+1. The API key **must** come from `process.env.NEXT_PUBLIC_KINOPOISK_API_KEY` — never hard-coded in source files.
+2. All streaming service links use `target="_blank" rel="noopener noreferrer"` — preserve this on any new external links.
+3. Never commit `.env.local` or any file containing credentials.
 
 ---
 
@@ -100,38 +159,37 @@ Until tooling is established, follow these general principles:
 
 ### Branch Naming
 
-| Type        | Pattern                        | Example                         |
-|-------------|--------------------------------|---------------------------------|
-| Feature     | `feat/<short-description>`     | `feat/user-authentication`      |
-| Bug fix     | `fix/<short-description>`      | `fix/null-pointer-on-login`     |
-| AI/Claude   | `claude/<task-id>`             | `claude/claude-md-mlwea94obhy2v8za-IkaEq` |
-| Docs        | `docs/<short-description>`     | `docs/update-readme`            |
+| Type | Pattern | Example |
+|---|---|---|
+| Feature | `feat/<short-description>` | `feat/add-more-services` |
+| Bug fix | `fix/<short-description>` | `fix/missing-poster-fallback` |
+| AI/Claude | `claude/<task-id>` | `claude/claude-md-mlwfg2fz2h2iwoxi-yz4iW` |
+| Docs | `docs/<short-description>` | `docs/update-readme` |
 
 ### Commit Messages
 
-Use the imperative mood and keep the subject line under 72 characters:
+Use the imperative mood, subject line under 72 characters:
 
 ```
-Add user authentication module
-Fix null pointer exception on login page
-Update CLAUDE.md with project structure
+Add Amediateka to streaming services list
+Fix rating display when kp score is zero
+Move API key to environment variable
 ```
 
-For larger changes, add a blank line after the subject followed by a body:
+For larger changes, add a blank line after the subject and a body:
 
 ```
-Refactor database connection pooling
+Refactor search into a custom hook
 
-Switch from a single shared connection to a pool to improve
-concurrency under load. Configurable via DATABASE_POOL_SIZE env var.
+Extracts handleSearch logic from page.js into useMovieSearch
+to make the component easier to test in isolation.
 ```
 
 ### Pull Requests
 
 - Keep PRs focused on a single concern
-- Provide a clear description of what changed and why
-- Link to any related issues
-- Ensure all tests and linters pass before requesting review
+- Describe what changed and why
+- Ensure lint passes (`npm run lint`) before requesting review
 
 ---
 
@@ -139,29 +197,11 @@ concurrency under load. Configurable via DATABASE_POOL_SIZE env var.
 
 When working in this repository as an AI assistant:
 
-1. **Read before editing** — Always read a file before modifying it
-2. **Minimal changes** — Make only the changes needed to fulfill the task; avoid refactoring unrelated code
-3. **No speculative features** — Do not add functionality that was not asked for
-4. **Preserve existing style** — Match indentation, naming, and structure of the surrounding code
-5. **Update this file** — If you establish new conventions, tooling, or project structure, update the relevant sections in this file
-6. **Branch discipline** — Develop on the branch specified in your task; never push to `main` or `master` without explicit permission
-7. **Commit granularity** — Prefer small, focused commits over large sweeping ones
-8. **Security** — Never commit secrets, credentials, tokens, or private keys; always use environment variables or a secrets manager
-
----
-
-## Adding a New Language or Framework
-
-When the technology stack is chosen, update this file with:
-
-- The specific language version and runtime requirements
-- The package manager and lockfile (e.g., `package-lock.json`, `poetry.lock`)
-- Linting and formatting tools and their configuration files
-- How the test runner is invoked
-- Any code generation or build steps that must run before tests
-
----
-
-## Contact and Ownership
-
-> **TODO:** Add team contacts, on-call information, or links to internal documentation once available.
+1. **Read before editing** — always read a file before modifying it
+2. **Minimal changes** — only change what is necessary; do not refactor unrelated code
+3. **No speculative features** — do not add functionality that was not requested
+4. **Preserve inline style pattern** — do not introduce a CSS framework or CSS modules unless explicitly asked
+5. **Environment variables** — never hard-code secrets; always use `process.env.*`
+6. **Branch discipline** — develop on the branch specified in your task; never push to `main`/`master` without explicit permission
+7. **Commit granularity** — prefer small, focused commits over large sweeping ones
+8. **Update this file** — if you add new files, dependencies, or conventions, update the relevant sections here
