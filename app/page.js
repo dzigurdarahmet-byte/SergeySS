@@ -1,6 +1,14 @@
 'use client';
 import { useState } from 'react';
 
+const GENRES = {
+  28: 'боевик', 12: 'приключения', 16: 'мультфильм', 35: 'комедия',
+  80: 'криминал', 99: 'документальный', 18: 'драма', 10751: 'семейный',
+  14: 'фэнтези', 36: 'история', 27: 'ужасы', 10402: 'музыка',
+  9648: 'детектив', 10749: 'мелодрама', 878: 'фантастика',
+  53: 'триллер', 10752: 'военный', 37: 'вестерн',
+};
+
 const SERVICES = [
   { name: 'Кинопоиск', color: '#FF6200', url: 'https://www.kinopoisk.ru/index.php?kp_query=' },
   { name: 'Иви', color: '#0abab5', url: 'https://www.ivi.ru/search/?q=' },
@@ -17,7 +25,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const API_KEY = process.env.NEXT_PUBLIC_KINOPOISK_API_KEY;
+  const API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -27,18 +35,16 @@ export default function Home() {
     setResults([]);
     try {
       const url =
-        'https://api.kinopoisk.dev/v1.4/movie/search?query=' +
+        'https://api.themoviedb.org/3/search/movie?query=' +
         encodeURIComponent(query) +
-        '&limit=5&page=1';
-      const response = await fetch(url, {
-        headers: { 'X-API-KEY': API_KEY },
-      });
+        '&language=ru-RU&page=1&api_key=' + API_KEY;
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Ошибка сервера: ' + response.status);
       }
       const data = await response.json();
-      if (data.docs && data.docs.length > 0) {
-        setResults(data.docs);
+      if (data.results && data.results.length > 0) {
+        setResults(data.results);
       } else {
         setError('Ничего не найдено. Попробуй другой запрос.');
       }
@@ -150,10 +156,10 @@ export default function Home() {
                 gap: '24px',
               }}
             >
-              {film.poster && film.poster.url ? (
+              {film.poster_path ? (
                 <img
-                  src={film.poster.url}
-                  alt={film.name}
+                  src={`https://image.tmdb.org/t/p/w185${film.poster_path}`}
+                  alt={film.title}
                   style={{
                     width: '90px',
                     height: '130px',
@@ -190,9 +196,9 @@ export default function Home() {
                   }}
                 >
                   <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '700' }}>
-                    {film.name || film.alternativeName || 'Без названия'}
+                    {film.title || film.original_title || 'Без названия'}
                   </h3>
-                  {film.year && (
+                  {film.release_date && (
                     <span
                       style={{
                         color: '#666',
@@ -202,10 +208,10 @@ export default function Home() {
                         borderRadius: '6px',
                       }}
                     >
-                      {film.year}
+                      {film.release_date.split('-')[0]}
                     </span>
                   )}
-                  {film.rating && film.rating.kp > 0 && (
+                  {film.vote_average > 0 && (
                     <span
                       style={{
                         background: 'linear-gradient(135deg, #FF4B2B, #FF8E53)',
@@ -215,16 +221,16 @@ export default function Home() {
                         fontWeight: '700',
                       }}
                     >
-                      ⭐ {film.rating.kp.toFixed(1)}
+                      ⭐ {film.vote_average.toFixed(1)}
                     </span>
                   )}
                 </div>
-                {film.genres && film.genres.length > 0 && (
+                {film.genre_ids && film.genre_ids.length > 0 && (
                   <p style={{ color: '#666', margin: '0 0 12px', fontSize: '13px' }}>
-                    {film.genres.map((g) => g.name).join(', ')}
+                    {film.genre_ids.map((id) => GENRES[id]).filter(Boolean).join(', ')}
                   </p>
                 )}
-                {film.description && (
+                {film.overview && (
                   <p
                     style={{
                       color: '#888',
@@ -233,7 +239,7 @@ export default function Home() {
                       lineHeight: '1.5',
                     }}
                   >
-                    {film.description.slice(0, 180)}...
+                    {film.overview.slice(0, 180)}...
                   </p>
                 )}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -242,7 +248,7 @@ export default function Home() {
                       key={service.name}
                       href={
                         service.url +
-                        encodeURIComponent(film.name || film.alternativeName || query)
+                        encodeURIComponent(film.title || film.original_title || query)
                       }
                       target="_blank"
                       rel="noopener noreferrer"
